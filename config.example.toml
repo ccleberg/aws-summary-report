@@ -1,0 +1,27 @@
+[aws]
+region = "us-east-1"
+profile = "default"
+
+[email]
+sender = "you@example.com"
+smtp_server = "smtp.example.com"
+smtp_port = 587
+smtp_username = "you@example.com"
+smtp_password = "yourpassword"
+
+[recipients]
+emails = [
+    "you@example.com"
+]
+
+[report]
+sections = [
+    "acm",
+    "cloudfront",
+    "cloudwatch",
+    "config",
+    "costexplorer",
+    "route53",
+    "s3",
+    "securityhub"
+]

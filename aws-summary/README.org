@@ -1,0 +1,236 @@
+#+TITLE: AWS Summary Report
+#+AUTHOR: Christian Cleberg
+#+OPTIONS: toc:nil
+
+* Overview
+
+This project is a Python-based tool that sends a daily plaintext email summarizing key AWS environment metrics and alerts. It is modular, configurable, and intended for solo or small-team AWS accounts that want automated visibility into infrastructure health, security, and cost.
+
+* Features
+
+- ✅ Daily billing breakdown (Cost Explorer)
+- ✅ New Security Hub findings
+- ✅ Route 53 health check status
+- ✅ CloudWatch alarms triggered in the last 24 hours
+- ✅ S3 bucket access/encryption audit
+- ✅ Expiring ACM certificates (next 30 days)
+- ✅ AWS Config non-compliant resources
+- ✅ CloudFront distribution changes (last 48h)
+- ✅ WAF blocked request summary (regional)
+
+The program is configured to be modular and accept new sections to the report as needed. To create a new section, simply create the =new_section.py= script inside the =sections/= directory and update the =sections= variable inside the =config.toml= file.
+
+* Directory Structure
+
+#+begin_src
+.
+├── README.org             ; This file
+├── config.toml            ; Configuration (AWS profile, region, etc.)
+├── email_formatter.py     ; Utility to format email body
+├── main.py                ; Main entry point for report generation
+├── pyproject.toml         ; Project metadata and dependencies
+├── utils.py               ; Shared utility functions
+├── sections/              ; Modular report generators
+    ├── acm.py             ; ACM expiring certs
+    ├── cloudfront.py      ; CloudFront changes
+    ├── cloudwatch.py      ; Alarms
+    ├── config.py          ; Config compliance
+    ├── costexplorer.py    ; Billing
+    ├── route53.py         ; Health checks
+    ├── s3.py              ; Bucket audit
+    └── securityhub.py     ; Findings
+#+end_src
+
+* Usage
+
+** 1. Configure
+Edit =config.toml= to configure your AWS, email, and report options:
+
+#+begin_src toml
+[aws]
+profile = "default"
+region = "us-east-1"
+
+[email]
+from = "you@example.com"
+to = ["you@example.com"]
+subject = "Daily AWS Report"
+
+[recipients]
+emails = [
+    "you@example.com"
+]
+
+[report]
+sections = [
+    "acm"
+]
+#+end_src
+
+** 2. Run
+
+Use Python to run the report and send the email:
+
+#+begin_src bash
+python main.py
+#+end_src
+
+Or, if you're using [[https://github.com/astral-sh/uv][uv]] (which will auto-install dependencies and create a virtual environment):
+
+#+begin_src bash
+uv main.py
+#+end_src
+
+Emails are plaintext with ASCII-formatted tables (via =tabulate=).
+
+* Installation
+
+** Dependencies
+
+Python 3.11+ is recommended. Install dependencies using:
+
+#+begin_src bash
+pip install -r requirements.txt
+# or if you're using uv:
+uv sync
+#+end_src
+
+You may need to install:
+- =boto3=
+- =tabulate=
+
+** AWS Permissions
+
+Ensure your IAM user or role has read access to:
+
+- Cost Explorer
+- Security Hub
+- S3, CloudFront, CloudWatch
+- Route 53, ACM, Config, WAF
+- SES (if sending emails from within AWS)
+
+* Customizing Sections
+
+Each section is defined in a file under =sections/= and implements a:
+
+#+begin_src python
+def get_section(config) -> str:
+    ...
+#+end_src
+
+You can add, remove, or modify these sections and control their order in =main.py=.
+
+* Example Output
+
+Here is an example of the output produced by the program.
+
+#+begin_src
+Expiring TLS Certificates:
+No certs expiring in the next 30 days.
+
+CloudFront Changes:
+No distributions changed in the last 48h.
+
+CloudWatch Alarms:
+No alarms triggered in the last 24h.
+
+AWS Config Non-Compliant Resources:
+[https://eu-west-1.console.aws.amazon.com/config/home#/resources?complianceType=NON_COMPLIANT]
+┌───────────────────────────────────────┬────────────────────────┐
+│ Resource Type                         │ Resource ID            │
+├───────────────────────────────────────┼────────────────────────┤
+│ AWS::::Account                        │ <account-id>           │
+├───────────────────────────────────────┼────────────────────────┤
+│ AWS::EC2::VPC                         │ vpc-<id>               │
+├───────────────────────────────────────┼────────────────────────┤
+│ AWS::EC2::Subnet                      │ subnet-<id>            │
+├───────────────────────────────────────┼────────────────────────┤
+│ AWS::EC2::Subnet                      │ subnet-<id>            │
+├───────────────────────────────────────┼────────────────────────┤
+│ AWS::EC2::Subnet                      │ subnet-<id>            │
+├───────────────────────────────────────┼────────────────────────┤
+│ AWS::EC2::VPCBlockPublicAccessOptions │ <account-id>           │
+├───────────────────────────────────────┼────────────────────────┤
+│ AWS::EC2::SecurityGroup               │ sg-<id>                │
+├───────────────────────────────────────┼────────────────────────┤
+│ AWS::S3::Bucket                       │ example-cf-logs        │
+├───────────────────────────────────────┼────────────────────────┤
+│ AWS::S3::Bucket                       │ img.example.com        │
+└───────────────────────────────────────┴────────────────────────┘
+
+AWS Billing Report for 2025-06-18
+[https://eu-west-1.console.aws.amazon.com/costmanagement/]
+┌────────────────────────────────────┬────────┐
+│ Service                            │   Cost │
+├────────────────────────────────────┼────────┤
+│ AWS CloudShell                     │  $0.00 │
+│ AWS Config                         │  $0.17 │
+│ AWS Glue                           │  $0.00 │
+│ AWS HealthImaging                  │  $0.00 │
+│ AWS Key Management Service         │  $0.00 │
+│ AWS Migration Hub Refactor Spaces  │  $0.00 │
+│ AWS Secrets Manager                │  $0.00 │
+│ AWS Security Hub                   │  $0.00 │
+│ AWS Service Catalog                │  $0.00 │
+│ AWS WAF                            │  $0.29 │
+│ Amazon CloudFront                  │  $0.00 │
+│ Amazon GuardDuty                   │  $0.00 │
+│ Amazon Location Service            │  $0.00 │
+│ Amazon Route 53                    │  $0.01 │
+│ Amazon Simple Notification Service │  $0.00 │
+│ Amazon Simple Queue Service        │  $0.00 │
+│ Amazon Simple Storage Service      │  $0.00 │
+│ AmazonCloudWatch                   │  $0.00 │
+│ CloudWatch Events                  │  $0.00 │
+├────────────────────────────────────┼────────┤
+│ TOTAL                              │  $0.47 │
+└────────────────────────────────────┴────────┘
+
+Note: Costs are estimated and may change.
+
+Route 53 Health Checks:
+[https://eu-west-1.console.aws.amazon.com/route53/v2/healthchecks/home]
+┌────────────────────┬──────────┐
+│ Domain             │ Status   │
+├────────────────────┼──────────┤
+│ img.example.com    │ HEALTHY  │
+└────────────────────┴──────────┘
+
+S3 Bucket Access Summary:
+[https://eu-west-1.console.aws.amazon.com/s3/home]
+┌──────────────────────────────────────────────┬────────┬────────────┐
+│ Bucket                                       │ Public │ Encrypted  │
+├──────────────────────────────────────────────┼────────┼────────────┤
+│ aws-cloudtrail-logs-<account-id>-<suffix>    │ No     │ Yes        │
+│ example-cf-logs                              │ No     │ Yes        │
+│ img.example.com                              │ No     │ Yes        │
+└──────────────────────────────────────────────┴────────┴────────────┘
+
+AWS Security Hub Findings (Last 24h): 18 new finding(s)
+[https://eu-west-1.console.aws.amazon.com/securityhub/home?region=eu-west-1#/findings]
+┌───────────────┬────────────────────────────────────────────────────┬──────────────┬────────────────────────────────┐
+│ Severity      │ Title                                              │ Product      │ Resource                       │
+├───────────────┼────────────────────────────────────────────────────┼──────────────┼────────────────────────────────┤
+│ INFORMATIONAL │ S3 buckets should have server access logging       │ Security Hub │ arn:aws:s3:::img.example.com   │
+│ INFORMATIONAL │ S3 buckets should require requests to use HTTPS    │ Security Hub │ arn:aws:s3:::img.example.com   │
+│ INFORMATIONAL │ S3 buckets should have lifecycle configuration     │ Security Hub │ arn:aws:s3:::img.example.com   │
+│ INFORMATIONAL │ S3 buckets should block public access              │ Security Hub │ arn:aws:s3:::example-cf-logs   │
+│ INFORMATIONAL │ ACLs should not be used to manage user access      │ Security Hub │ arn:aws:s3:::img.example.com   │
+│ INFORMATIONAL │ EC2 subnets shouldn't auto-assign public IPs       │ Security Hub │ arn:aws:ec2:eu-west-1:<acct>   │
+│ INFORMATIONAL │ VPC block public access should be enabled          │ Security Hub │ arn:aws:ec2:eu-west-1:<acct>   │
+│ INFORMATIONAL │ S3 bucket policies should restrict public access   │ Security Hub │ arn:aws:s3:::img.example.com   │
+│ INFORMATIONAL │ Unused network ACLs should be removed              │ Security Hub │ arn:aws:ec2:eu-west-1:<acct>   │
+│ INFORMATIONAL │ RSA certs should use 2048-bit+ key lengths         │ Security Hub │ arn:aws:acm:eu-west-1:<acct>   │
+│ INFORMATIONAL │ Athena workgroups should enable logging            │ Security Hub │ arn:aws:athena:eu-west-1:<acct>│
+└───────────────┴────────────────────────────────────────────────────┴──────────────┴────────────────────────────────┘
+#+end_src
+
+* License
+
+Refer to the LICENSE file.
+
+* Future Improvements
+
+- [ ] Email attachment support (e.g., CSV or HTML export)
+- [ ] Slack or Teams notification integration
+- [ ] Cloud deployment (Lambda, Step Functions)

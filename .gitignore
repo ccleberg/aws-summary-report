@@ -1,0 +1,7 @@
+__pycache__
+.ruff_cache
+.venv
+aws_summary.egg_info
+config.toml
+sections/__pycache__
+uv.lock
