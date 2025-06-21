@@ -33,6 +33,8 @@ def main():
     # DEBUG
     # print(body)
 
+    print("Program completed successfully.")
+
 
 if __name__ == "__main__":
     main()
